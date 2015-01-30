@@ -5,7 +5,7 @@ Settings = require "settings-sharelatex"
 
 
 module.exports = DockerRunner =
-  _docker: 'docker'
+  _docker: Settings.clsi?.docker?.binary or 'docker'
   _baseCommand: ['run', '--rm=true', '-t', '-v', '$COMPILE_DIR:/source', '--name=texlive-$PROJECT_ID']
 
   run: (project_id, command, directory, timeout, callback = (error) ->) ->
@@ -20,10 +20,11 @@ module.exports = DockerRunner =
     docker_cmd = docker_cmd.concat (arg.replace('$COMPILE_DIR', '/source') for arg in command.slice(1))
 
     proc = spawn DockerRunner._docker, docker_cmd, stdio: "inherit", cwd: directory
-    timer = setTimeout timeout, () ->
+    timer = setTimeout () ->
       logger.warn "timeout achieved, stopping docker instance"
       exec 'docker', ['stop', "texlive-#{project_id}"]
-      callback {timedout: true}
+      callback timedout: true
+    , timeout
     proc.on "close", () ->
       clearTimeout timer
       callback()
