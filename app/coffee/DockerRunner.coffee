@@ -1,5 +1,4 @@
 spawn = require("child_process").spawn
-exec  = require("child_process").exec
 logger = require "logger-sharelatex"
 Settings = require "settings-sharelatex"
 
@@ -22,9 +21,10 @@ module.exports = DockerRunner =
     proc = spawn DockerRunner._docker, docker_cmd, stdio: "inherit", cwd: directory
     timer = setTimeout () ->
       logger.warn "timeout achieved, stopping docker instance"
-      exec 'docker', ['stop', "texlive-#{project_id}"]
-      callback timedout: true
-    , timeout
+      proc = spawn 'docker', ['stop', "texlive-#{project_id}"]
+      proc.on "close", ->
+        callback timedout: true
+    , (timeout ?= 30) * 1000
     proc.on "close", () ->
       clearTimeout timer
       callback()
