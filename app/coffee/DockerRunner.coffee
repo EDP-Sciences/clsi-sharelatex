@@ -24,7 +24,7 @@ module.exports = DockerRunner =
       proc = spawn 'docker', ['stop', "texlive-#{project_id}"]
       proc.on "close", ->
         callback timedout: true
-    , (timeout ?= 30) * 1000
+    , timeout
     proc.on "close", () ->
       clearTimeout timer
       callback()
