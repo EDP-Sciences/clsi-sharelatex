@@ -20,10 +20,13 @@ module.exports = DockerRunner =
 
     proc = spawn DockerRunner._docker, docker_cmd, stdio: "inherit", cwd: directory
     timer = setTimeout () ->
+      # Too late, don't call the callback when the process exits
+      _callback = callback
+      callback = ->
       logger.warn "timeout achieved, stopping docker instance"
-      proc = spawn 'docker', ['stop', "texlive-#{project_id}"]
+      proc = spawn DockerRunner._docker, ['stop', "texlive-#{project_id}"]
       proc.on "close", ->
-        callback timedout: true
+        _callback timedout: true
     , timeout
     proc.on "close", () ->
       clearTimeout timer
