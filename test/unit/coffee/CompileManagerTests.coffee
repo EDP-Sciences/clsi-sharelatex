@@ -12,9 +12,12 @@ describe "CompileManager", ->
 			"./LatexRunner": @LatexRunner = {}
 			"./ResourceWriter": @ResourceWriter = {}
 			"./OutputFileFinder": @OutputFileFinder = {}
+			"./OutputCacheManager": @OutputCacheManager = {}
 			"settings-sharelatex": @Settings = { path: compilesDir: "/compiles/dir" }
 			"logger-sharelatex": @logger = { log: sinon.stub() }
 			"child_process": @child_process = {}
+			"./CommandRunner": @CommandRunner = {}
+			"fs": @fs = {}
 		@callback = sinon.stub()
 
 	describe "doCompile", ->
@@ -25,6 +28,15 @@ describe "CompileManager", ->
 			}, {
 				path: "output.pdf"
 				type: "pdf"
+			}]
+			@build_files = [{
+				path: "output.log"
+				type: "log"
+				build: 1234
+			}, {
+				path: "output.pdf"
+				type: "pdf"
+				build: 1234
 			}]
 			@request =
 				resources: @resources = "mock-resources"
@@ -37,6 +49,7 @@ describe "CompileManager", ->
 			@ResourceWriter.syncResourcesToDisk = sinon.stub().callsArg(3)
 			@LatexRunner.runLatex = sinon.stub().callsArg(2)
 			@OutputFileFinder.findOutputFiles = sinon.stub().callsArgWith(2, null, @output_files)
+			@OutputCacheManager.saveOutputFiles = sinon.stub().callsArgWith(2, null, @build_files)
 			@CompileManager.doCompile @request, @callback
 
 		it "should write the resources to disk", ->
@@ -60,7 +73,7 @@ describe "CompileManager", ->
 				.should.equal true
 
 		it "should return the output files", ->
-			@callback.calledWith(null, @output_files).should.equal true
+			@callback.calledWith(null, @build_files).should.equal true
 
 	describe "clearProject", ->
 		describe "succesfully", ->
@@ -161,3 +174,39 @@ describe "CompileManager", ->
 						column: @column
 					}])
 					.should.equal true
+
+	describe "wordcount", ->
+		beforeEach ->
+			@CommandRunner.run = sinon.stub().callsArg(4)
+			@fs.readFileSync = sinon.stub().returns @stdout = "Encoding: ascii\nWords in text: 2"
+			@callback  = sinon.stub()
+
+			@project_id = "project-id-123"
+			@timeout = 10 * 1000
+			@file_name = "main.tex"
+			@Settings.path.compilesDir = "/local/compile/directory"
+
+			@CompileManager.wordcount @project_id, @file_name, @callback
+
+		it "should run the texcount command", ->
+			@directory = "#{@Settings.path.compilesDir}/#{@project_id}"
+			@file_path = "$COMPILE_DIR/#{@file_name}"
+			@command =[ "texcount", "-inc", @file_path, "-out=" + @file_path + ".wc"]
+			
+			@CommandRunner.run
+				.calledWith(@project_id, @command, @directory, @timeout)
+				.should.equal true
+
+		it "should call the callback with the parsed output", ->
+			@callback
+				.calledWith(null, {
+					encode: "ascii"
+					textWords: 2
+					headWords: 0
+					outside: 0
+					headers: 0
+					elements: 0
+					mathInline: 0
+					mathDisplay: 0
+				})
+				.should.equal true

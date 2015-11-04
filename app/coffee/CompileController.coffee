@@ -28,19 +28,20 @@ module.exports = CompileController =
 								status = "success"
 
 					timer.done()
-					res.send (code or 200), {
+					res.status(code or 200).send {
 						compile:
 							status: status
 							error:  error?.message or error
 							outputFiles: outputFiles.map (file) ->
 								url: "#{Settings.apis.clsi.url}/project/#{request.project_id}/output/#{file.path}"
 								type: file.type
+								build: file.build
 					}
 		
 	clearCache: (req, res, next = (error) ->) ->
 		ProjectPersistenceManager.clearProject req.params.project_id, (error) ->
 			return next(error) if error?
-			res.send 204 # No content
+			res.sendStatus(204) # No content
 
 	syncFromCode: (req, res, next = (error) ->) ->
 		file   = req.query.file
@@ -64,4 +65,14 @@ module.exports = CompileController =
 			return next(error) if error?
 			res.send JSON.stringify {
 				code: codePositions
+			}
+
+	wordcount: (req, res, next = (error) ->) ->
+		file   = req.query.file || "main.tex"
+		project_id = req.params.project_id
+
+		CompileManager.wordcount project_id, file, (error, result) ->
+			return next(error) if error?
+			res.send JSON.stringify {
+				texcount: result
 			}

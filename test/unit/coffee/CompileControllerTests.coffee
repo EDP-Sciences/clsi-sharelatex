@@ -36,12 +36,15 @@ describe "CompileController", ->
 			@output_files = [{
 				path: "output.pdf"
 				type: "pdf"
+				build: 1234
 			}, {
 				path: "output.log"
 				type: "log"
+				build: 1234
 			}]
 			@RequestParser.parse = sinon.stub().callsArgWith(1, null, @request)
 			@ProjectPersistenceManager.markProjectAsJustAccessed = sinon.stub().callsArg(1)
+			@res.status = sinon.stub().returnsThis()
 			@res.send = sinon.stub()
 
 		describe "successfully", ->
@@ -65,14 +68,16 @@ describe "CompileController", ->
 					.should.equal true
 
 			it "should return the JSON response", ->
+				@res.status.calledWith(200).should.equal true
 				@res.send
-					.calledWith(200,
+					.calledWith(
 						compile:
 							status: "success"
 							error: null
 							outputFiles: @output_files.map (file) =>
 								url: "#{@Settings.apis.clsi.url}/project/#{@project_id}/output/#{file.path}"
 								type: file.type
+								build: file.build
 					)
 					.should.equal true
 			
@@ -82,8 +87,9 @@ describe "CompileController", ->
 				@CompileController.compile @req, @res
 		
 			it "should return the JSON response with the error", ->
+				@res.status.calledWith(500).should.equal true
 				@res.send
-					.calledWith(500,
+					.calledWith(
 						compile:
 							status: "error"
 							error:  @message
@@ -99,8 +105,9 @@ describe "CompileController", ->
 				@CompileController.compile @req, @res
 		
 			it "should return the JSON response with the timeout status", ->
+				@res.status.calledWith(200).should.equal true
 				@res.send
-					.calledWith(200,
+					.calledWith(
 						compile:
 							status: "timedout"
 							error: @message
@@ -114,8 +121,9 @@ describe "CompileController", ->
 				@CompileController.compile @req, @res
 		
 			it "should return the JSON response with the failure status", ->
+				@res.status.calledWith(200).should.equal true
 				@res.send
-					.calledWith(200,
+					.calledWith(
 						compile:
 							error: null
 							status: "failure"
@@ -181,3 +189,27 @@ describe "CompileController", ->
 				)
 				.should.equal true
 
+	describe "wordcount", ->
+		beforeEach ->
+			@file = "main.tex"
+			@project_id = "mock-project-id"
+			@req.params =
+				project_id: @project_id
+			@req.query =
+				file: @file
+			@res.send = sinon.stub()
+
+			@CompileManager.wordcount = sinon.stub().callsArgWith(2, null, @texcount = ["mock-texcount"])
+			@CompileController.wordcount @req, @res, @next
+
+		it "should return the word count of a file", ->
+			@CompileManager.wordcount
+				.calledWith(@project_id, @file)
+				.should.equal true
+
+		it "should return the texcount info", ->
+			@res.send
+				.calledWith(JSON.stringify
+					texcount: @texcount
+				)
+				.should.equal true

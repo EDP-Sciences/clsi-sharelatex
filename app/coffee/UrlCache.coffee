@@ -10,7 +10,12 @@ module.exports = UrlCache =
 	downloadUrlToFile: (project_id, url, destPath, lastModified, callback = (error) ->) ->
 		UrlCache._ensureUrlIsInCache project_id, url, lastModified, (error, pathToCachedUrl) =>
 			return callback(error) if error?
-			UrlCache._copyFile(pathToCachedUrl, destPath, callback)
+			UrlCache._copyFile pathToCachedUrl, destPath, (error) ->
+				if error?
+					UrlCache._clearUrlDetails project_id, url, () ->
+						callback(error)
+				else
+					callback(error)
 
 	clearProject: (project_id, callback = (error) ->) ->
 		UrlCache._findAllUrlsInProject project_id, (error, urls) ->
@@ -62,14 +67,17 @@ module.exports = UrlCache =
 
 	_copyFile: (from, to, _callback = (error) ->) ->
 		callbackOnce = (error) ->
+			if error?
+				logger.error err: error, from:from, to:to, "error copying file from cache"
 			_callback(error)
 			_callback = () ->
 		writeStream = fs.createWriteStream(to)
 		readStream = fs.createReadStream(from)
 		writeStream.on "error", callbackOnce
 		readStream.on "error", callbackOnce
-		writeStream.on "close", () -> callbackOnce()
-		readStream.pipe(writeStream)
+		writeStream.on "close", callbackOnce
+		writeStream.on "open", () ->
+			readStream.pipe(writeStream)
 
 	_clearUrlFromCache: (project_id, url, callback = (error) ->) ->
 		UrlCache._clearUrlDetails project_id, url, (error) ->
@@ -83,27 +91,27 @@ module.exports = UrlCache =
 
 	_findUrlDetails: (project_id, url, callback = (error, urlDetails) ->) ->
 		db.UrlCache.find(where: { url: url, project_id: project_id })
-			.success((urlDetails) -> callback null, urlDetails)
+			.then((urlDetails) -> callback null, urlDetails)
 			.error callback
 
 	_updateOrCreateUrlDetails: (project_id, url, lastModified, callback = (error) ->) ->
-		db.UrlCache.findOrCreate(url: url, project_id: project_id)
-			.success(
-				(urlDetails) ->
+		db.UrlCache.findOrCreate(where: {url: url, project_id: project_id})
+			.spread(
+				(urlDetails, created) ->
 					urlDetails.updateAttributes(lastModified: lastModified)
-						.success(() -> callback())
+						.then(() -> callback())
 						.error(callback)
 			)
 			.error callback
 
 	_clearUrlDetails: (project_id, url, callback = (error) ->) ->
-		db.UrlCache.destroy(url: url, project_id: project_id)
-			.success(() -> callback null)
+		db.UrlCache.destroy(where: {url: url, project_id: project_id})
+			.then(() -> callback null)
 			.error callback
 
 	_findAllUrlsInProject: (project_id, callback = (error, urls) ->) ->
 		db.UrlCache.findAll(where: { project_id: project_id })
-			.success(
+			.then(
 				(urlEntries) ->
 					callback null, urlEntries.map((entry) -> entry.url)
 			)
