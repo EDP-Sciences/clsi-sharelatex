@@ -25,7 +25,7 @@ module.exports = OutputFileOptimiser =
 			stdout += chunk.toString()
 		callback = _.once(callback) # avoid double call back for error and close event
 		proc.on "error", (err) ->
-			logger.warn {err, args}, "qpdf failed"
+			logger.warn {err, args}, "qpdf failed", stdout
 			callback(null) # ignore the error
 		proc.on "close", (code) ->
 			if code != 0
