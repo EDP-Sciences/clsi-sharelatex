@@ -10,11 +10,10 @@ module.exports = DockerRunner =
   run: (project_id, command, directory, timeout, callback = (error) ->) ->
     logger.log project_id: project_id, command: command, directory: directory, "running docker command"
 
-    if command[0] != 'latexmk'
-      throw 'Invalid command'
-
     docker_cmd = (arg.replace('$COMPILE_DIR', directory).replace('$PROJECT_ID', project_id) \
       for arg in DockerRunner._baseCommand)
+    if command[0] != "latexmk"
+      docker_cmd.push "--entrypoint=#{command[0]}"
     docker_cmd.push Settings.clsi?.docker?.image or "texlive"
     docker_cmd = docker_cmd.concat (arg.replace('$COMPILE_DIR', '/source') for arg in command.slice(1))
 
