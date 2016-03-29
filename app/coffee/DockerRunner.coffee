@@ -7,7 +7,7 @@ module.exports = DockerRunner =
   _docker: Settings.clsi?.docker?.binary or 'docker'
   _baseCommand: ['run', '--rm=true', '-t', '-v', '$COMPILE_DIR:/source', '--name=texlive-$PROJECT_ID']
 
-  run: (project_id, command, directory, timeout, callback = (error) ->) ->
+  run: (project_id, command, directory, image, timeout, callback = (error) ->) ->
     logger.log project_id: project_id, command: command, directory: directory, "running docker command"
 
     docker_cmd = (arg.replace('$COMPILE_DIR', directory).replace('$PROJECT_ID', project_id) \
