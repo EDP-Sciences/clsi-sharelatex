@@ -15,6 +15,7 @@ module.exports =
 		compilesDir:  Path.resolve(__dirname + "/../compiles")
 		clsiCacheDir: Path.resolve(__dirname + "/../cache")
 		synctexBaseDir: (project_id) -> Path.join(@compilesDir, project_id)
+		qpdf: "qpdf"
 
 	# clsi:
 	# 	commandRunner: "docker-runner-sharelatex"

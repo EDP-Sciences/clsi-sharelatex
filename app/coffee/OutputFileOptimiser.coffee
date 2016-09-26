@@ -4,6 +4,7 @@ spawn = require("child_process").spawn
 logger = require "logger-sharelatex"
 Metrics = require "./Metrics"
 _ = require "underscore"
+Settings = require "settings-sharelatex"
 
 module.exports = OutputFileOptimiser =
 
@@ -21,7 +22,7 @@ module.exports = OutputFileOptimiser =
 		logger.log args: args, "running qpdf command"
 
 		timer = new Metrics.Timer("qpdf")
-		proc = spawn("qpdf", args)
+		proc = spawn Settings.path.qpdf, args
 		stdout = ""
 		proc.stdout.on "data", (chunk) ->
 			stdout += chunk.toString()
