@@ -14,7 +14,7 @@ module.exports = ResourceWriter =
 			jobs = for resource in resources
 				do (resource) =>
 					(callback) => @_writeResourceToDisk(project_id, resource, basePath, callback)
-			async.parallelLimit jobs, 5, callback
+			async.series jobs, callback
 
 	_removeExtraneousFiles: (resources, basePath, _callback = (error) ->) ->
 		timer = new Metrics.Timer("unlink-output-files")
