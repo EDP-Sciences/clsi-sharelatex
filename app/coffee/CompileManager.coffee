@@ -64,7 +64,8 @@ module.exports = CompileManager =
 		compileDir = Path.join(Settings.path.compilesDir, project_id)
 		proc = child_process.spawn "rm", ["-r", compileDir]
 
-		proc.on "error", callback
+		proc.on "error", (err) ->
+			callback if err.code == "ENOENT" then null else err
 
 		stderr = ""
 		proc.stderr.on "data", (chunk) -> stderr += chunk.toString()
